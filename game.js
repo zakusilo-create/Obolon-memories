@@ -46,6 +46,159 @@ const hotspots = [
 let mouse = { x: -1, y: -1 };
 let hoveredHotspot = null;
 
+// --- Calm Ambient Electronic Soundtrack (Web Audio API) ---
+const music = {
+  ctx: null,
+  master: null,
+  delay: null,
+  started: false,
+  muted: false,
+  stepTimer: null,
+  step: 0,
+  // Warm nostalgic progression: Fmaj7 -> Dm9 -> Bbmaj7 -> C6
+  chords: [
+    [174.61, 220.0, 261.63, 329.63], // Fmaj7 (F3, A3, C4, E4)
+    [146.83, 220.0, 261.63, 329.63], // Dm9   (D3, A3, C4, E4)
+    [116.54, 174.61, 220.0, 293.66], // Bbmaj7 (Bb2, F3, A3, D4)
+    [130.81, 196.0, 220.0, 329.63]   // C6    (C3, G3, A3, E4)
+  ],
+  melody: [
+    523.25, 0, 659.25, 587.33,
+    440.0, 0, 523.25, 0,
+    587.33, 523.25, 440.0, 0,
+    392.0, 0, 440.0, 523.25
+  ],
+
+  start() {
+    if (this.started) {
+      if (this.ctx && this.ctx.state === "suspended") this.ctx.resume();
+      return;
+    }
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+
+    this.ctx = new AudioCtx();
+    this.started = true;
+
+    this.master = this.ctx.createGain();
+    this.master.gain.setValueAtTime(0.0001, this.ctx.currentTime);
+    this.master.gain.exponentialRampToValueAtTime(0.28, this.ctx.currentTime + 2.2);
+    this.master.connect(this.ctx.destination);
+
+    // Gentle tape-style echo bus
+    this.delay = this.ctx.createDelay(1.0);
+    this.delay.delayTime.value = 0.42;
+    const feedback = this.ctx.createGain();
+    feedback.gain.value = 0.34;
+    const delayFilter = this.ctx.createBiquadFilter();
+    delayFilter.type = "lowpass";
+    delayFilter.frequency.value = 1400;
+
+    this.delay.connect(delayFilter);
+    delayFilter.connect(feedback);
+    feedback.connect(this.delay);
+    delayFilter.connect(this.master);
+
+    this.playTick();
+    this.stepTimer = setInterval(() => this.playTick(), 1000);
+  },
+
+  playPad(freqs, duration) {
+    const now = this.ctx.currentTime;
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(520, now);
+    filter.frequency.linearRampToValueAtTime(920, now + duration * 0.5);
+    filter.frequency.linearRampToValueAtTime(480, now + duration);
+
+    const padGain = this.ctx.createGain();
+    padGain.gain.setValueAtTime(0.0001, now);
+    padGain.gain.linearRampToValueAtTime(0.14, now + 1.1);
+    padGain.gain.linearRampToValueAtTime(0.11, now + duration - 0.9);
+    padGain.gain.linearRampToValueAtTime(0.0001, now + duration);
+
+    filter.connect(padGain);
+    padGain.connect(this.master);
+
+    freqs.forEach((f, idx) => {
+      const osc = this.ctx.createOscillator();
+      osc.type = idx === 0 ? "sine" : "triangle";
+      osc.frequency.setValueAtTime(f, now);
+      // Subtle warm analog detune
+      osc.detune.setValueAtTime((idx % 2 === 0 ? 1 : -1) * 4.5, now);
+      osc.connect(filter);
+      osc.start(now);
+      osc.stop(now + duration + 0.05);
+    });
+  },
+
+  playPluck(freq) {
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(freq, now);
+
+    const harmonic = this.ctx.createOscillator();
+    harmonic.type = "triangle";
+    harmonic.frequency.setValueAtTime(freq * 2, now);
+
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.linearRampToValueAtTime(0.09, now + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 1.4);
+
+    const hg = this.ctx.createGain();
+    hg.gain.setValueAtTime(0.02, now);
+    hg.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
+
+    osc.connect(g);
+    harmonic.connect(hg);
+    hg.connect(g);
+
+    g.connect(this.master);
+    g.connect(this.delay);
+
+    osc.start(now);
+    harmonic.start(now);
+    osc.stop(now + 1.5);
+    harmonic.stop(now + 0.6);
+  },
+
+  playTick() {
+    if (!this.ctx || this.ctx.state !== "running") return;
+    const barStep = this.step % 4;
+    const chordIdx = Math.floor(this.step / 4) % this.chords.length;
+
+    if (barStep === 0) {
+      this.playPad(this.chords[chordIdx], 4.2);
+    }
+
+    const note = this.melody[this.step % this.melody.length];
+    if (note > 0) {
+      this.playPluck(note);
+    }
+
+    this.step++;
+  },
+
+  toggleMute() {
+    if (!this.started) {
+      this.start();
+      return;
+    }
+    this.muted = !this.muted;
+    const now = this.ctx.currentTime;
+    this.master.gain.cancelScheduledValues(now);
+    this.master.gain.setTargetAtTime(this.muted ? 0.0001 : 0.28, now, 0.15);
+  }
+};
+
+const muteBtn = { x: WIDTH - 94, y: 14, w: 80, h: 28 };
+
+function isInRect(pos, r) {
+  return pos.x >= r.x && pos.x <= r.x + r.w && pos.y >= r.y && pos.y <= r.y + r.h;
+}
+
 function drawCoverImage(img) {
   if (!img.complete || img.naturalWidth === 0) return;
   const imgRatio = img.naturalWidth / img.naturalHeight;
@@ -207,6 +360,21 @@ function render() {
     }
   }
 
+  // Subtle music toggle pill (top-right)
+  if (fadeAlpha < 0.9) {
+    const label = !music.started ? "♪ Play" : music.muted ? "♪ Off" : "♪ On";
+    ctx.fillStyle = "rgba(13, 10, 23, 0.65)";
+    ctx.fillRect(muteBtn.x, muteBtn.y, muteBtn.w, muteBtn.h);
+    ctx.strokeStyle = "rgba(255, 229, 163, 0.4)";
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(muteBtn.x + 0.5, muteBtn.y + 0.5, muteBtn.w - 1, muteBtn.h - 1);
+    ctx.font = "14px monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#ffe5a3";
+    ctx.fillText(label, muteBtn.x + muteBtn.w / 2, muteBtn.y + muteBtn.h / 2);
+  }
+
   if (fadeAlpha > 0) {
     ctx.fillStyle = `rgba(0, 0, 0, ${fadeAlpha})`;
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
@@ -231,11 +399,12 @@ function getCanvasCoords(e) {
 
 canvas.addEventListener("mousemove", (e) => {
   mouse = getCanvasCoords(e);
+  if (isInRect(mouse, muteBtn)) {
+    canvas.style.cursor = "pointer";
+    return;
+  }
   if (state === "vignette") {
-    hoveredHotspot =
-      hotspots.find(
-        (h) => mouse.x >= h.x && mouse.x <= h.x + h.w && mouse.y >= h.y && mouse.y <= h.y + h.h
-      ) || null;
+    hoveredHotspot = hotspots.find((h) => isInRect(mouse, h)) || null;
     canvas.style.cursor = hoveredHotspot ? "pointer" : "default";
   } else {
     canvas.style.cursor = "pointer";
@@ -243,21 +412,25 @@ canvas.addEventListener("mousemove", (e) => {
 });
 
 function handleContinue() {
+  music.start();
   if (state === "ready") {
     state = "fade_out";
   }
 }
 
 canvas.addEventListener("click", (e) => {
+  const pos = getCanvasCoords(e);
+  if (isInRect(pos, muteBtn)) {
+    music.toggleMute();
+    return;
+  }
+  music.start();
   if (state === "ready") {
     handleContinue();
     return;
   }
   if (state === "vignette") {
-    const pos = getCanvasCoords(e);
-    const hit = hotspots.find(
-      (h) => pos.x >= h.x && pos.x <= h.x + h.w && pos.y >= h.y && pos.y <= h.y + h.h
-    );
+    const hit = hotspots.find((h) => isInRect(pos, h));
     if (hit) {
       messageText = hit.text;
       messageTimer = 4.5;
@@ -265,7 +438,11 @@ canvas.addEventListener("click", (e) => {
   }
 });
 
-window.addEventListener("keydown", () => {
+window.addEventListener("keydown", (e) => {
+  if (e.key.toLowerCase() === "m") {
+    music.toggleMute();
+    return;
+  }
   handleContinue();
 });
 
