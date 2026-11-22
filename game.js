@@ -278,33 +278,104 @@ function update(dt) {
   }
 }
 
+function drawTitleLockup(alpha) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  // Soft twilight sky scrim behind the title
+  const grad = ctx.createLinearGradient(0, 0, 0, 175);
+  grad.addColorStop(0, "rgba(18, 12, 28, 0.72)");
+  grad.addColorStop(0.7, "rgba(18, 12, 28, 0.32)");
+  grad.addColorStop(1, "rgba(18, 12, 28, 0)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, WIDTH, 175);
+
+  const cx = WIDTH / 2;
+  const cy = 68;
+  const titleText = "OBOLON MEMORIES";
+
+  ctx.font = "bold 54px Georgia, 'Times New Roman', serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  // Subtle warm outer glow
+  ctx.save();
+  ctx.shadowColor = "rgba(255, 186, 102, 0.45)";
+  ctx.shadowBlur = 18;
+  ctx.fillStyle = "rgba(255, 224, 160, 0.25)";
+  ctx.fillText(titleText, cx, cy);
+  ctx.restore();
+
+  // Deep layered drop shadow
+  ctx.fillStyle = "rgba(16, 9, 26, 0.9)";
+  ctx.fillText(titleText, cx + 3, cy + 5);
+
+  // Crisp dark outline
+  ctx.lineJoin = "round";
+  ctx.lineWidth = 7;
+  ctx.strokeStyle = "#1b1026";
+  ctx.strokeText(titleText, cx, cy);
+
+  // Warm sunset gold gradient fill
+  const textGrad = ctx.createLinearGradient(0, cy - 26, 0, cy + 26);
+  textGrad.addColorStop(0, "#fff9e4");
+  textGrad.addColorStop(0.55, "#ffd584");
+  textGrad.addColorStop(1, "#e6944c");
+  ctx.fillStyle = textGrad;
+  ctx.fillText(titleText, cx, cy);
+
+  // Ornamental golden divider with center diamond
+  const ruleY = cy + 36;
+  const ruleHalf = 148;
+  const lineGrad = ctx.createLinearGradient(cx - ruleHalf, ruleY, cx + ruleHalf, ruleY);
+  lineGrad.addColorStop(0, "rgba(255, 213, 132, 0)");
+  lineGrad.addColorStop(0.25, "rgba(255, 213, 132, 0.85)");
+  lineGrad.addColorStop(0.5, "rgba(255, 245, 214, 1)");
+  lineGrad.addColorStop(0.75, "rgba(255, 213, 132, 0.85)");
+  lineGrad.addColorStop(1, "rgba(255, 213, 132, 0)");
+  ctx.strokeStyle = lineGrad;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(cx - ruleHalf, ruleY);
+  ctx.lineTo(cx - 10, ruleY);
+  ctx.moveTo(cx + 10, ruleY);
+  ctx.lineTo(cx + ruleHalf, ruleY);
+  ctx.stroke();
+
+  // Center diamond
+  ctx.fillStyle = "#ffe6aa";
+  ctx.beginPath();
+  ctx.moveTo(cx, ruleY - 4);
+  ctx.lineTo(cx + 4, ruleY);
+  ctx.lineTo(cx, ruleY + 4);
+  ctx.lineTo(cx - 4, ruleY);
+  ctx.closePath();
+  ctx.fill();
+
+  // Tracked subtitle
+  drawOutlinedText(
+    "К И Е В   ·   О Б О Л О Н Ь",
+    cx,
+    ruleY + 18,
+    "bold 14px monospace",
+    "#ffe9be",
+    "#191024",
+    4
+  );
+
+  ctx.restore();
+}
+
 function render() {
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-  drawCoverImage(splashImg);
+  const isTitle = state === "fade_in" || state === "ready" || state === "fade_out";
+  drawCoverImage(isTitle ? titleImg : westLineImg);
 
-  if (state === "fade_in" || state === "ready" || state === "fade_out") {
-    // Subtle top gradient scrim for title readability
-    const grad = ctx.createLinearGradient(0, 0, 0, 130);
-    grad.addColorStop(0, `rgba(13, 10, 23, ${0.65 * titleAlpha})`);
-    grad.addColorStop(1, "rgba(13, 10, 23, 0)");
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, WIDTH, 130);
-
+  if (isTitle) {
     if (titleAlpha > 0) {
-      ctx.save();
-      ctx.globalAlpha = titleAlpha;
-      drawOutlinedText(
-        "Воспоминания об Оболони",
-        WIDTH / 2,
-        62,
-        "bold 48px Georgia, serif",
-        "#fff0c8",
-        "#1a1224",
-        7
-      );
-      ctx.restore();
+      drawTitleLockup(titleAlpha);
     }
 
     if (state === "ready") {
