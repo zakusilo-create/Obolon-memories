@@ -18,28 +18,28 @@ let messageTimer = 0;
 // Hotspots positioned for 1024x576
 const hotspots = [
   {
-    name: "West Line Entrance",
+    name: "Вход в West Line",
     x: 135,
     y: 255,
     w: 165,
     h: 175,
-    text: "The automatic doors hum softly. Warm air smells like fresh bread and summer dust."
+    text: "Автоматические двери тихо гудят. Тёплый воздух пахнет свежим хлебом и летней пылью."
   },
   {
-    name: "Streetlamp",
+    name: "Фонарь",
     x: 485,
     y: 250,
     w: 72,
     h: 215,
-    text: "Three globes glowing against the Obolon sunset."
+    text: "Три тёплых шара светятся на фоне оболонского заката."
   },
   {
-    name: "West Line Sign",
+    name: "Вывеска West Line",
     x: 545,
     y: 95,
     w: 165,
     h: 160,
-    text: "WEST LINE. Everyone in the neighborhood met here at least once."
+    text: "WEST LINE. Здесь хоть раз встречался каждый на районе."
   }
 ];
 
@@ -265,7 +265,7 @@ function update(dt) {
     fadeAlpha = Math.min(1, fadeAlpha + dt / 0.7);
     if (fadeAlpha === 1) {
       state = "vignette";
-      messageText = "Obolon, late summer. Click around to remember.";
+      messageText = "Оболонь, конец лета. Нажимайте вокруг, чтобы вспомнить.";
       messageTimer = 4.0;
     }
   } else if (state === "vignette") {
@@ -296,10 +296,10 @@ function render() {
       ctx.save();
       ctx.globalAlpha = titleAlpha;
       drawOutlinedText(
-        "Obolon Memories",
+        "Воспоминания об Оболони",
         WIDTH / 2,
         62,
-        "bold 52px Georgia, serif",
+        "bold 48px Georgia, serif",
         "#fff0c8",
         "#1a1224",
         7
@@ -312,7 +312,7 @@ function render() {
       ctx.save();
       ctx.globalAlpha = pulse;
       drawOutlinedText(
-        "Click or press any key",
+        "Нажмите, чтобы продолжить",
         WIDTH / 2,
         HEIGHT - 34,
         "bold 20px monospace",
@@ -362,7 +362,7 @@ function render() {
 
   // Subtle music toggle pill (top-right)
   if (fadeAlpha < 0.9) {
-    const label = !music.started ? "♪ Play" : music.muted ? "♪ Off" : "♪ On";
+    const label = !music.started ? "♪ Звук" : music.muted ? "♪ Выкл" : "♪ Вкл";
     ctx.fillStyle = "rgba(13, 10, 23, 0.65)";
     ctx.fillRect(muteBtn.x, muteBtn.y, muteBtn.w, muteBtn.h);
     ctx.strokeStyle = "rgba(255, 229, 163, 0.4)";
