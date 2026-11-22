@@ -1,9 +1,8 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-ctx.imageSmoothingEnabled = false;
 
-const WIDTH = 320;
-const HEIGHT = 200;
+const WIDTH = 1024;
+const HEIGHT = 576;
 
 const splashImg = new Image();
 splashImg.src = "assets/art/splash_screen.jpeg";
@@ -16,30 +15,30 @@ let lastTime = performance.now();
 let messageText = "";
 let messageTimer = 0;
 
-// Example hotspots for after the splash screen
+// Hotspots positioned for 1024x576
 const hotspots = [
   {
     name: "West Line Entrance",
-    x: 45,
-    y: 92,
-    w: 50,
-    h: 58,
+    x: 135,
+    y: 255,
+    w: 165,
+    h: 175,
     text: "The automatic doors hum softly. Warm air smells like fresh bread and summer dust."
   },
   {
     name: "Streetlamp",
-    x: 150,
-    y: 88,
-    w: 24,
-    h: 72,
+    x: 485,
+    y: 250,
+    w: 72,
+    h: 215,
     text: "Three globes glowing against the Obolon sunset."
   },
   {
     name: "West Line Sign",
-    x: 170,
-    y: 34,
-    w: 52,
-    h: 54,
+    x: 545,
+    y: 95,
+    w: 165,
+    h: 160,
     text: "WEST LINE. Everyone in the neighborhood met here at least once."
   }
 ];
@@ -63,28 +62,25 @@ function drawCoverImage(img) {
   ctx.drawImage(img, sx, sy, sw, sh, 0, 0, WIDTH, HEIGHT);
 }
 
-function drawOutlinedText(text, x, y, font, fill, outline, align = "center") {
+function drawOutlinedText(text, x, y, font, fill, outline, outlineWidth = 4, align = "center") {
   ctx.font = font;
   ctx.textAlign = align;
   ctx.textBaseline = "middle";
 
-  ctx.fillStyle = outline;
-  for (let ox = -1; ox <= 1; ox++) {
-    for (let oy = -1; oy <= 1; oy++) {
-      if (ox !== 0 || oy !== 0) {
-        ctx.fillText(text, Math.round(x + ox), Math.round(y + oy));
-      }
-    }
-  }
-  ctx.fillStyle = "rgba(20, 12, 30, 0.9)";
-  ctx.fillText(text, Math.round(x + 1), Math.round(y + 2));
+  ctx.lineJoin = "round";
+  ctx.lineWidth = outlineWidth;
+  ctx.strokeStyle = outline;
+  ctx.strokeText(text, Math.round(x), Math.round(y));
+
+  ctx.fillStyle = "rgba(20, 12, 30, 0.85)";
+  ctx.fillText(text, Math.round(x + 2), Math.round(y + 4));
 
   ctx.fillStyle = fill;
   ctx.fillText(text, Math.round(x), Math.round(y));
 }
 
-function wrapText(text, maxWidth) {
-  ctx.font = "8px monospace";
+function wrapText(text, maxWidth, font = "20px Georgia, serif") {
+  ctx.font = font;
   const words = text.split(" ");
   const lines = [];
   let line = "";
@@ -136,9 +132,12 @@ function render() {
   drawCoverImage(splashImg);
 
   if (state === "fade_in" || state === "ready" || state === "fade_out") {
-    // Subtle top scrim for title readability
-    ctx.fillStyle = `rgba(13, 10, 23, ${0.42 * titleAlpha})`;
-    ctx.fillRect(0, 0, WIDTH, 44);
+    // Subtle top gradient scrim for title readability
+    const grad = ctx.createLinearGradient(0, 0, 0, 130);
+    grad.addColorStop(0, `rgba(13, 10, 23, ${0.65 * titleAlpha})`);
+    grad.addColorStop(1, "rgba(13, 10, 23, 0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, WIDTH, 130);
 
     if (titleAlpha > 0) {
       ctx.save();
@@ -146,10 +145,11 @@ function render() {
       drawOutlinedText(
         "Obolon Memories",
         WIDTH / 2,
-        22,
-        "bold 18px Georgia, serif",
+        62,
+        "bold 52px Georgia, serif",
         "#fff0c8",
-        "#1a1224"
+        "#1a1224",
+        7
       );
       ctx.restore();
     }
@@ -161,10 +161,11 @@ function render() {
       drawOutlinedText(
         "Click or press any key",
         WIDTH / 2,
-        HEIGHT - 12,
-        "8px monospace",
+        HEIGHT - 34,
+        "bold 20px monospace",
         "#fff0d2",
-        "#140c1e"
+        "#140c1e",
+        5
       );
       ctx.restore();
     }
@@ -174,29 +175,34 @@ function render() {
       drawOutlinedText(
         hoveredHotspot.name,
         WIDTH / 2,
-        12,
-        "bold 8px monospace",
+        34,
+        "bold 22px monospace",
         "#ffe5a3",
-        "#140c1e"
+        "#140c1e",
+        5
       );
     }
 
     // Dialog / narration box at bottom
     if (messageTimer > 0 && messageText) {
-      const lines = wrapText(messageText, WIDTH - 24);
-      const boxH = lines.length * 10 + 10;
-      const boxY = HEIGHT - boxH - 4;
-      ctx.fillStyle = "rgba(13, 10, 23, 0.82)";
-      ctx.fillRect(6, boxY, WIDTH - 12, boxH);
-      ctx.strokeStyle = "rgba(255, 229, 163, 0.45)";
-      ctx.strokeRect(6.5, boxY + 0.5, WIDTH - 13, boxH - 1);
+      const font = "22px Georgia, serif";
+      const lines = wrapText(messageText, WIDTH - 80, font);
+      const lineHeight = 30;
+      const boxH = lines.length * lineHeight + 28;
+      const boxY = HEIGHT - boxH - 18;
 
-      ctx.font = "8px monospace";
+      ctx.fillStyle = "rgba(13, 10, 23, 0.84)";
+      ctx.fillRect(24, boxY, WIDTH - 48, boxH);
+      ctx.strokeStyle = "rgba(255, 229, 163, 0.5)";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(25, boxY + 1, WIDTH - 50, boxH - 2);
+
+      ctx.font = font;
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
       ctx.fillStyle = "#fff4dc";
       lines.forEach((line, i) => {
-        ctx.fillText(line, WIDTH / 2, boxY + 5 + i * 10);
+        ctx.fillText(line, WIDTH / 2, boxY + 14 + i * lineHeight);
       });
     }
   }

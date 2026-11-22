@@ -26,8 +26,8 @@ body {
 
 .viewport {
   position: relative;
-  width: min(100vw - 32px, calc((100vh - 32px) * 1.6));
-  aspect-ratio: 320 / 200;
+  width: min(100vw - 32px, calc((100vh - 32px) * (16 / 9)));
+  aspect-ratio: 1024 / 576;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 224, 178, 0.12);
   background: #000;
 }
