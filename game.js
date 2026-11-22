@@ -46,152 +46,64 @@ const hotspots = [
 let mouse = { x: -1, y: -1 };
 let hoveredHotspot = null;
 
-// --- Calm Ambient Electronic Soundtrack (Web Audio API) ---
+// --- Soundtrack: Kyiv Summer.mp3 ---
 const music = {
-  ctx: null,
-  master: null,
-  delay: null,
+  audio: new Audio("assets/audio/Kyiv%20Summer.mp3"),
   started: false,
   muted: false,
-  stepTimer: null,
-  step: 0,
-  // Warm nostalgic progression: Fmaj7 -> Dm9 -> Bbmaj7 -> C6
-  chords: [
-    [174.61, 220.0, 261.63, 329.63], // Fmaj7 (F3, A3, C4, E4)
-    [146.83, 220.0, 261.63, 329.63], // Dm9   (D3, A3, C4, E4)
-    [116.54, 174.61, 220.0, 293.66], // Bbmaj7 (Bb2, F3, A3, D4)
-    [130.81, 196.0, 220.0, 329.63]   // C6    (C3, G3, A3, E4)
-  ],
-  melody: [
-    523.25, 0, 659.25, 587.33,
-    440.0, 0, 523.25, 0,
-    587.33, 523.25, 440.0, 0,
-    392.0, 0, 440.0, 523.25
-  ],
+  targetVolume: 0.65,
+  fadeTimer: null,
+
+  init() {
+    this.audio.loop = true;
+    this.audio.preload = "auto";
+    this.audio.volume = 0;
+  },
 
   start() {
     if (this.started) {
-      if (this.ctx && this.ctx.state === "suspended") this.ctx.resume();
+      if (this.audio.paused && !this.muted) {
+        this.audio.play().catch(() => {});
+      }
       return;
     }
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
-
-    this.ctx = new AudioCtx();
     this.started = true;
-
-    this.master = this.ctx.createGain();
-    this.master.gain.setValueAtTime(0.0001, this.ctx.currentTime);
-    this.master.gain.exponentialRampToValueAtTime(0.28, this.ctx.currentTime + 2.2);
-    this.master.connect(this.ctx.destination);
-
-    // Gentle tape-style echo bus
-    this.delay = this.ctx.createDelay(1.0);
-    this.delay.delayTime.value = 0.42;
-    const feedback = this.ctx.createGain();
-    feedback.gain.value = 0.34;
-    const delayFilter = this.ctx.createBiquadFilter();
-    delayFilter.type = "lowpass";
-    delayFilter.frequency.value = 1400;
-
-    this.delay.connect(delayFilter);
-    delayFilter.connect(feedback);
-    feedback.connect(this.delay);
-    delayFilter.connect(this.master);
-
-    this.playTick();
-    this.stepTimer = setInterval(() => this.playTick(), 1000);
-  },
-
-  playPad(freqs, duration) {
-    const now = this.ctx.currentTime;
-    const filter = this.ctx.createBiquadFilter();
-    filter.type = "lowpass";
-    filter.frequency.setValueAtTime(520, now);
-    filter.frequency.linearRampToValueAtTime(920, now + duration * 0.5);
-    filter.frequency.linearRampToValueAtTime(480, now + duration);
-
-    const padGain = this.ctx.createGain();
-    padGain.gain.setValueAtTime(0.0001, now);
-    padGain.gain.linearRampToValueAtTime(0.14, now + 1.1);
-    padGain.gain.linearRampToValueAtTime(0.11, now + duration - 0.9);
-    padGain.gain.linearRampToValueAtTime(0.0001, now + duration);
-
-    filter.connect(padGain);
-    padGain.connect(this.master);
-
-    freqs.forEach((f, idx) => {
-      const osc = this.ctx.createOscillator();
-      osc.type = idx === 0 ? "sine" : "triangle";
-      osc.frequency.setValueAtTime(f, now);
-      // Subtle warm analog detune
-      osc.detune.setValueAtTime((idx % 2 === 0 ? 1 : -1) * 4.5, now);
-      osc.connect(filter);
-      osc.start(now);
-      osc.stop(now + duration + 0.05);
+    this.audio.volume = 0;
+    this.audio.play().then(() => {
+      this.fadeTo(this.muted ? 0 : this.targetVolume, 1500);
+    }).catch(() => {
+      this.started = false;
     });
   },
 
-  playPluck(freq) {
-    const now = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(freq, now);
-
-    const harmonic = this.ctx.createOscillator();
-    harmonic.type = "triangle";
-    harmonic.frequency.setValueAtTime(freq * 2, now);
-
-    const g = this.ctx.createGain();
-    g.gain.setValueAtTime(0.0001, now);
-    g.gain.linearRampToValueAtTime(0.09, now + 0.03);
-    g.gain.exponentialRampToValueAtTime(0.0001, now + 1.4);
-
-    const hg = this.ctx.createGain();
-    hg.gain.setValueAtTime(0.02, now);
-    hg.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
-
-    osc.connect(g);
-    harmonic.connect(hg);
-    hg.connect(g);
-
-    g.connect(this.master);
-    g.connect(this.delay);
-
-    osc.start(now);
-    harmonic.start(now);
-    osc.stop(now + 1.5);
-    harmonic.stop(now + 0.6);
-  },
-
-  playTick() {
-    if (!this.ctx || this.ctx.state !== "running") return;
-    const barStep = this.step % 4;
-    const chordIdx = Math.floor(this.step / 4) % this.chords.length;
-
-    if (barStep === 0) {
-      this.playPad(this.chords[chordIdx], 4.2);
-    }
-
-    const note = this.melody[this.step % this.melody.length];
-    if (note > 0) {
-      this.playPluck(note);
-    }
-
-    this.step++;
+  fadeTo(target, durationMs) {
+    if (this.fadeTimer) clearInterval(this.fadeTimer);
+    const steps = 30;
+    const stepMs = durationMs / steps;
+    const startVol = this.audio.volume;
+    let currentStep = 0;
+    this.fadeTimer = setInterval(() => {
+      currentStep++;
+      const t = Math.min(1, currentStep / steps);
+      this.audio.volume = Math.max(0, Math.min(1, startVol + (target - startVol) * t));
+      if (t >= 1) {
+        clearInterval(this.fadeTimer);
+        this.fadeTimer = null;
+      }
+    }, stepMs);
   },
 
   toggleMute() {
     if (!this.started) {
+      this.muted = false;
       this.start();
       return;
     }
     this.muted = !this.muted;
-    const now = this.ctx.currentTime;
-    this.master.gain.cancelScheduledValues(now);
-    this.master.gain.setTargetAtTime(this.muted ? 0.0001 : 0.28, now, 0.15);
+    this.fadeTo(this.muted ? 0 : this.targetVolume, 300);
   }
 };
+music.init();
 
 const muteBtn = { x: WIDTH - 94, y: 14, w: 80, h: 28 };
 
