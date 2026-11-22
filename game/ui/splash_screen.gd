@@ -36,7 +36,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not _can_continue or _transitioning:
 		return
 
-	var is_press := (
+	var is_press: bool = (
 		(event is InputEventMouseButton and event.pressed)
 		or (event is InputEventKey and event.pressed and not event.echo)
 	)
