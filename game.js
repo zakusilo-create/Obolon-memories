@@ -76,6 +76,10 @@ const music = {
   }
 };
 music.init();
+// Attempt autoplay immediately on the splash/title screen; if blocked by browser policy,
+// start on the very first pointer or key interaction.
+music.start();
+window.addEventListener("pointerdown", () => music.start(), { once: true });
 
 // --- Kathy Rain-Style Dialog Data ---
 const speakers = {
