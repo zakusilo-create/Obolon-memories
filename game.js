@@ -4,8 +4,11 @@ const ctx = canvas.getContext("2d");
 const WIDTH = 1024;
 const HEIGHT = 576;
 
-const splashImg = new Image();
-splashImg.src = "assets/art/splash_screen.jpeg";
+const titleImg = new Image();
+titleImg.src = "assets/art/title_screen.jpg";
+
+const westLineImg = new Image();
+westLineImg.src = "assets/art/splash_screen.jpeg";
 
 let state = "fade_in"; // fade_in -> ready -> fade_out -> vignette
 let fadeAlpha = 1.0;
