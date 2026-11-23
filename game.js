@@ -91,39 +91,203 @@ const speakers = {
     name: "АНДРЕЙ",
     color: "#ffb36b",
     portrait: () => images.portrait_andrey
+  },
+  narrator: {
+    name: "",
+    color: "#e6c78a",
+    portrait: () => null
   }
 };
 
-const embankmentDialog = [
-  {
-    speaker: "lena",
-    text: "Наконец-то дошёл! Я уже думала, ты застрял в очереди у West Line."
+const dialogNodes = {
+  intro: {
+    lines: [
+      {
+        speaker: "lena",
+        text: "Ты наконец пришёл. Я уже думала, ты так и останешься стоять под «Супермакетом»."
+      },
+      {
+        speaker: "andrey",
+        text: "Там опять буква «Р» мигает. Смотрю, ты сегодня какая-то тихая. Что-то случилось?"
+      },
+      {
+        speaker: "narrator",
+        text: "Лена смотрит на тёмную воду Днепра, затем медленно разжимает ладонь. В пальцах — смятый жёлтый чек из West Line."
+      },
+      {
+        speaker: "lena",
+        text: "Я пришла пораньше. И нашла это прямо на перилах у фонаря. На обороте — твоим почерком."
+      },
+      {
+        speaker: "lena",
+        text: "«Если ты это читаешь — не садись на утренний поезд. — А.»"
+      }
+    ],
+    choices: [
+      { label: "1. «Подожди... о каком ещё утреннем поезде речь?»", next: "ask_train" },
+      { label: "2. «Это не я писал. Покажи чек поближе.»", next: "inspect_note" },
+      { label: "3. «Ты что-то от меня скрываешь, Лена?»", next: "press_lena" }
+    ]
   },
-  {
-    speaker: "andrey",
-    text: "Почти. Зато посмотри на небо — летом на Оболони закаты всегда какие-то нереальные."
+
+  ask_train: {
+    lines: [
+      {
+        speaker: "lena",
+        text: "Вот именно, Андрей. Я никому не говорила. Вообще никому."
+      },
+      {
+        speaker: "andrey",
+        text: "Стоп. Значит, утренний поезд... это правда?"
+      },
+      {
+        speaker: "lena",
+        text: "Завтра в 6:15. Мне предложили работу в другом городе. Билет уже в рюкзаке. Я пришла на набережную, чтобы сказать тебе лично..."
+      },
+      {
+        speaker: "lena",
+        text: "А потом увидела эту записку. У меня аж руки задрожали."
+      }
+    ],
+    next: "twist_reveal"
   },
-  {
-    speaker: "lena",
-    text: "Ага, и воздух у Днепра сразу прохладнее. Люблю это время, когда фонари только зажигаются."
+
+  inspect_note: {
+    lines: [
+      {
+        speaker: "andrey",
+        text: "Дай сюда. Это действительно мой почерк... но я клянусь, я ничего не оставлял на перилах."
+      },
+      {
+        speaker: "lena",
+        text: "Тогда откуда ты знаешь про мой поезд в 6:15 утра?!"
+      },
+      {
+        speaker: "andrey",
+        text: "Какой поезд?! Ты... уезжаешь из Киева?"
+      },
+      {
+        speaker: "lena",
+        text: "Мне дали оффер неделю назад. Я тянула до последнего вечера, не знала, как сказать... А тут это."
+      }
+    ],
+    next: "twist_reveal"
   },
-  {
-    speaker: "andrey",
-    text: "Помнишь, как мы в прошлом году сидели тут на ступеньках до полуночи и слушали музыку с телефона?"
+
+  press_lena: {
+    lines: [
+      {
+        speaker: "lena",
+        text: "Не смотри на меня так. Я сама в шоке."
+      },
+      {
+        speaker: "lena",
+        text: "У меня завтра поезд в 6:15 утра. В один конец. Я шла сюда попрощаться, а на перилах уже лежала эта записка."
+      },
+      {
+        speaker: "andrey",
+        text: "В один конец?.. И ты собиралась сказать мне об этом за десять часов до вокзала?"
+      },
+      {
+        speaker: "lena",
+        text: "Я боялась, что если скажу раньше — не смогу уехать. Посмотри хотя бы на бумажку!"
+      }
+    ],
+    next: "twist_reveal"
   },
-  {
-    speaker: "lena",
-    text: "Конечно помню. Ты тогда ещё сказал, что это лучший вечер лета."
+
+  twist_reveal: {
+    lines: [
+      {
+        speaker: "narrator",
+        text: "Андрей переворачивает выцветший чек под жёлтым светом фонаря. Чернила почти стёрлись, но дата внизу ещё читается: 22 августа — три года назад."
+      },
+      {
+        speaker: "andrey",
+        text: "Подожди... смотри на дату. Это чек трёхлетней давности. Тот самый вечер, когда мы поссорились и ты чуть не уехала в первый раз."
+      },
+      {
+        speaker: "lena",
+        text: "Три года назад? Значит..."
+      },
+      {
+        speaker: "andrey",
+        text: "Я написал это тогда, на ступеньках. А потом струсил и засунул записку глубоко в щель жёлтой кирпичной стены. Ты так её и не увидела — ты просто осталась сама."
+      },
+      {
+        speaker: "lena",
+        text: "Постой, Андрей..."
+      },
+      {
+        speaker: "lena",
+        text: "Если ты спрятал её глубоко в кирпичной стене три года назад — кто тогда вытащил её сегодня и аккуратно положил на перила, прямо перед моим приходом?"
+      },
+      {
+        speaker: "narrator",
+        text: "Внизу, у самой воды, кто-то в тёмной куртке на секунду замирает под дальним фонарём — и растворяется в сумерках набережной."
+      }
+    ],
+    choices: [
+      { label: "1. «На этот раз я не струшу. Лена, не садись на поезд.»", next: "end_stay" },
+      { label: "2. «Кто бы это ни был — давай дойдём до залива. Нам нужно поговорить.»", next: "end_bay" },
+      { label: "3. «Ты видела того человека у фонаря? Я должен узнать, кто это.»", next: "end_mystery" }
+    ]
   },
-  {
-    speaker: "andrey",
-    text: "Похоже, сегодня у нас есть шанс его повторить. Пройдёмся вдоль воды?"
+
+  end_stay: {
+    lines: [
+      {
+        speaker: "lena",
+        text: "Знаешь... три года назад я ждала именно этих слов."
+      },
+      {
+        speaker: "andrey",
+        text: "Я опоздал на три года. Но, кажется, Оболонь решила дать нам второй шанс."
+      },
+      {
+        speaker: "lena",
+        text: "Пошли пройдёмся вдоль Днепра. До шести утра ещё целая вечность."
+      }
+    ],
+    end: true
   },
-  {
-    speaker: "lena",
-    text: "Пошли. Только не слишком быстро — хочется запомнить этот вечер."
+
+  end_bay: {
+    lines: [
+      {
+        speaker: "lena",
+        text: "Хорошо. До залива, как в то лето."
+      },
+      {
+        speaker: "andrey",
+        text: "Обещаю — никаких недосказанностей. Только ты, я и тёплый вечер."
+      },
+      {
+        speaker: "lena",
+        text: "И одна очень странная старая записка в кармане."
+      }
+    ],
+    end: true
+  },
+
+  end_mystery: {
+    lines: [
+      {
+        speaker: "lena",
+        text: "Андрей, не придумывай детектив... Хотя... у него в руках точно что-то блеснуло."
+      },
+      {
+        speaker: "andrey",
+        text: "Чек пролежал в стене три года и вдруг оказался на перилах именно в день твоего отъезда? Я не верю в такие совпадения."
+      },
+      {
+        speaker: "lena",
+        text: "Тогда пошли вниз, к воде. Пока он не ушёл слишком далеко."
+      }
+    ],
+    end: true
   }
-];
+};
 
 // --- Scene Definitions ---
 const scenes = {
@@ -184,7 +348,7 @@ const scenes = {
         y: 332,
         w: 58,
         h: 122,
-        onClick: () => startDialog(embankmentDialog)
+        onClick: () => startDialogNode("intro")
       },
       {
         name: "Андрей",
@@ -192,7 +356,23 @@ const scenes = {
         y: 320,
         w: 62,
         h: 134,
-        onClick: () => startDialog(embankmentDialog)
+        onClick: () => startDialogNode("intro")
+      },
+      {
+        name: "Кирпичная стена",
+        x: 18,
+        y: 255,
+        w: 225,
+        h: 115,
+        text: "Между жёлтыми кирпичами до сих пор узкая щель. Три года назад Андрей спрятал там сложенный чек из West Line."
+      },
+      {
+        name: "Перила у ступенек",
+        x: 365,
+        y: 370,
+        w: 50,
+        h: 70,
+        text: "Прохладный металл перил. Кто-то аккуратно положил старую записку прямо сверху — на видном месте."
       },
       {
         name: "Днепр",
@@ -200,14 +380,14 @@ const scenes = {
         y: 270,
         w: 300,
         h: 150,
-        text: "Розовые отблески заката дрожат на тёмной воде."
+        text: "Розовые отблески заката дрожат на тёмной воде. Внизу у дальнего фонаря уже никого нет."
       },
       {
         name: "← К West Line",
         x: 14,
-        y: 250,
+        y: 380,
         w: 155,
-        h: 220,
+        h: 150,
         isExit: true,
         targetScene: "west_line"
       }
@@ -232,10 +412,11 @@ let embankmentVisited = false;
 // --- Dialog State ---
 let dialog = {
   active: false,
-  lines: [],
+  nodeId: null,
   index: 0,
   charCount: 0,
-  charsPerSec: 42
+  charsPerSec: 44,
+  choosing: false
 };
 
 let mouse = { x: -1, y: -1 };
@@ -248,24 +429,76 @@ function isInRect(pos, r) {
   return pos.x >= r.x && pos.x <= r.x + r.w && pos.y >= r.y && pos.y <= r.y + r.h;
 }
 
-function startDialog(lines) {
+function getDialogBoxMetrics() {
+  const boxX = 28;
+  const boxH = 138;
+  const boxY = HEIGHT - boxH - 16;
+  const boxW = WIDTH - 56;
+  const pW = 114;
+  const pH = 152;
+  const px = boxX + 14;
+  const py = boxY + boxH - pH - 8;
+  const textX = px + pW + 20;
+  const textMaxW = boxX + boxW - textX - 24;
+  return { boxX, boxY, boxW, boxH, pW, pH, px, py, textX, textMaxW };
+}
+
+function getChoiceRects() {
+  const node = dialog.nodeId ? dialogNodes[dialog.nodeId] : null;
+  if (!node || !node.choices) return [];
+  const m = getDialogBoxMetrics();
+  return node.choices.map((c, i) => ({
+    x: m.textX - 6,
+    y: m.boxY + 20 + i * 34,
+    w: m.textMaxW + 10,
+    h: 28,
+    choice: c
+  }));
+}
+
+function startDialogNode(nodeId) {
+  if (!dialogNodes[nodeId]) {
+    dialog.active = false;
+    return;
+  }
   dialog.active = true;
-  dialog.lines = lines;
+  dialog.nodeId = nodeId;
   dialog.index = 0;
   dialog.charCount = 0;
+  dialog.choosing = false;
   messageTimer = 0;
 }
 
+function chooseDialogOption(choice) {
+  if (!choice) return;
+  if (choice.next) {
+    startDialogNode(choice.next);
+  } else {
+    dialog.active = false;
+  }
+}
+
 function advanceDialog() {
-  if (!dialog.active) return;
-  const line = dialog.lines[dialog.index];
-  if (dialog.charCount < line.text.length) {
+  if (!dialog.active || dialog.choosing) return;
+  const node = dialogNodes[dialog.nodeId];
+  if (!node) {
+    dialog.active = false;
+    return;
+  }
+  const line = node.lines[dialog.index];
+  if (line && dialog.charCount < line.text.length) {
     dialog.charCount = line.text.length;
     return;
   }
   dialog.index++;
-  if (dialog.index >= dialog.lines.length) {
-    dialog.active = false;
+  if (dialog.index >= node.lines.length) {
+    if (node.choices && node.choices.length > 0) {
+      dialog.choosing = true;
+    } else if (node.next) {
+      startDialogNode(node.next);
+    } else {
+      dialog.active = false;
+    }
   } else {
     dialog.charCount = 0;
   }
@@ -656,58 +889,86 @@ function drawTitleControls() {
 }
 
 function drawKathyRainDialog() {
-  const line = dialog.lines[dialog.index];
-  if (!line) return;
-  const speaker = speakers[line.speaker];
-  const portrait = speaker.portrait();
-
-  const boxX = 28;
-  const boxH = 132;
-  const boxY = HEIGHT - boxH - 16;
-  const boxW = WIDTH - 56;
+  const node = dialog.nodeId ? dialogNodes[dialog.nodeId] : null;
+  if (!node) return;
+  const m = getDialogBoxMetrics();
 
   // Dark plum-charcoal adventure dialog panel
-  ctx.fillStyle = "rgba(14, 10, 24, 0.92)";
-  ctx.fillRect(boxX, boxY, boxW, boxH);
+  ctx.fillStyle = "rgba(14, 10, 24, 0.93)";
+  ctx.fillRect(m.boxX, m.boxY, m.boxW, m.boxH);
 
   // Double retro border
   ctx.strokeStyle = "#d9b06c";
   ctx.lineWidth = 2;
-  ctx.strokeRect(boxX + 1, boxY + 1, boxW - 2, boxH - 2);
+  ctx.strokeRect(m.boxX + 1, m.boxY + 1, m.boxW - 2, m.boxH - 2);
   ctx.strokeStyle = "rgba(255, 229, 163, 0.25)";
   ctx.lineWidth = 1;
-  ctx.strokeRect(boxX + 5, boxY + 5, boxW - 10, boxH - 10);
+  ctx.strokeRect(m.boxX + 5, m.boxY + 5, m.boxW - 10, m.boxH - 10);
 
-  // Kathy Rain-style oval portrait popping slightly above the dialog bar
-  const pW = 114;
-  const pH = 152;
-  const px = boxX + 14;
-  const py = boxY + boxH - pH - 8;
+  if (dialog.choosing) {
+    // Show Andrey's portrait on the left while player picks a response
+    const portrait = speakers.andrey.portrait();
+    if (portrait && portrait.complete && portrait.naturalWidth > 0) {
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(portrait, m.px, m.py, m.pW, m.pH);
+      ctx.restore();
+    }
+
+    const rects = getChoiceRects();
+    rects.forEach((r) => {
+      const hovered = isInRect(mouse, r);
+      if (hovered) {
+        ctx.fillStyle = "rgba(255, 213, 132, 0.16)";
+        ctx.fillRect(r.x, r.y, r.w, r.h);
+        ctx.strokeStyle = "rgba(255, 229, 163, 0.45)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1);
+      }
+      ctx.font = hovered ? "bold 18px Georgia, serif" : "18px Georgia, serif";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = hovered ? "#fff6dc" : "#e3cfa6";
+      ctx.fillText(r.choice.label, r.x + 10, r.y + r.h / 2 + 1);
+    });
+    return;
+  }
+
+  const line = node.lines[dialog.index];
+  if (!line) return;
+  const speaker = speakers[line.speaker] || speakers.narrator;
+  const portrait = speaker.portrait();
 
   if (portrait && portrait.complete && portrait.naturalWidth > 0) {
     ctx.save();
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(portrait, px, py, pW, pH);
+    ctx.drawImage(portrait, m.px, m.py, m.pW, m.pH);
     ctx.restore();
   }
 
-  // Speaker name
-  const textX = px + pW + 20;
-  const textMaxW = boxX + boxW - textX - 24;
-  ctx.font = "bold 18px monospace";
-  ctx.textAlign = "left";
-  ctx.textBaseline = "top";
-  ctx.fillStyle = speaker.color;
-  ctx.fillText(speaker.name, textX, boxY + 16);
+  const hasPortrait = Boolean(portrait);
+  const textX = hasPortrait ? m.textX : m.boxX + 34;
+  const textMaxW = hasPortrait ? m.textMaxW : m.boxW - 68;
+
+  if (speaker.name) {
+    ctx.font = "bold 18px monospace";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillStyle = speaker.color;
+    ctx.fillText(speaker.name, textX, m.boxY + 15);
+  }
 
   // Typewriter text
   const visibleText = line.text.slice(0, Math.floor(dialog.charCount));
-  const font = "21px Georgia, serif";
+  const font = hasPortrait ? "20px Georgia, serif" : "italic 20px Georgia, serif";
   const wrapped = wrapText(visibleText, textMaxW, font);
   ctx.font = font;
-  ctx.fillStyle = "#f7efe0";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  ctx.fillStyle = hasPortrait ? "#f7efe0" : "#f0d9a8";
+  const startY = speaker.name ? m.boxY + 43 : m.boxY + 26;
   wrapped.forEach((l, i) => {
-    ctx.fillText(l, textX, boxY + 46 + i * 28);
+    ctx.fillText(l, textX, startY + i * 27);
   });
 
   // Advance indicator
@@ -716,7 +977,7 @@ function drawKathyRainDialog() {
     ctx.font = "bold 14px monospace";
     ctx.textAlign = "right";
     ctx.fillStyle = "#ffe5a3";
-    ctx.fillText("▼", boxX + boxW - 18, boxY + boxH - 22 + bob);
+    ctx.fillText("▼", m.boxX + m.boxW - 18, m.boxY + m.boxH - 22 + bob);
   }
 }
 
@@ -774,7 +1035,7 @@ function update(dt) {
         }
         if (currentSceneId === "embankment" && !embankmentVisited) {
           embankmentVisited = true;
-          startDialog(embankmentDialog);
+          startDialogNode("intro");
         }
       }
     } else if (fadeDir < 0) {
@@ -788,8 +1049,9 @@ function update(dt) {
     if (messageTimer > 0) {
       messageTimer = Math.max(0, messageTimer - dt);
     }
-    if (dialog.active) {
-      const line = dialog.lines[dialog.index];
+    if (dialog.active && !dialog.choosing) {
+      const node = dialog.nodeId ? dialogNodes[dialog.nodeId] : null;
+      const line = node ? node.lines[dialog.index] : null;
       if (line && dialog.charCount < line.text.length) {
         dialog.charCount = Math.min(line.text.length, dialog.charCount + dt * dialog.charsPerSec);
       }
@@ -931,6 +1193,13 @@ canvas.addEventListener("click", (e) => {
 
   if (mode === "scene") {
     if (dialog.active) {
+      if (dialog.choosing) {
+        const hitChoice = getChoiceRects().find((r) => isInRect(pos, r));
+        if (hitChoice) {
+          chooseDialogOption(hitChoice.choice);
+        }
+        return;
+      }
       advanceDialog();
       return;
     }
@@ -958,9 +1227,18 @@ window.addEventListener("keydown", (e) => {
     e.preventDefault();
     music.start();
     transitionToScene("west_line");
-  } else if (mode === "scene" && dialog.active && (e.key === " " || e.key === "Enter")) {
-    e.preventDefault();
-    advanceDialog();
+  } else if (mode === "scene" && dialog.active) {
+    if (dialog.choosing) {
+      const idx = parseInt(e.key, 10) - 1;
+      const rects = getChoiceRects();
+      if (idx >= 0 && idx < rects.length) {
+        e.preventDefault();
+        chooseDialogOption(rects[idx].choice);
+      }
+    } else if (e.key === " " || e.key === "Enter") {
+      e.preventDefault();
+      advanceDialog();
+    }
   }
 });
 
