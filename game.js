@@ -334,6 +334,113 @@ function wrapText(text, maxWidth, font = "21px Georgia, serif") {
   return lines;
 }
 
+// --- Seamless 10-Second Looping Ambient Animation for West Line ---
+const WEST_LINE_LOOP_SEC = 10.0;
+const lampMotes = [
+  { cx: 528, cy: 263, rx: 22, ry: 12, kx: 1, ky: 2, px: 0.2, py: 0.7, size: 2 },
+  { cx: 510, cy: 278, rx: 16, ry: 10, kx: 2, ky: 1, px: 1.8, py: 0.4, size: 2 },
+  { cx: 546, cy: 277, rx: 17, ry: 11, kx: 1, ky: 3, px: 3.1, py: 1.5, size: 2 },
+  { cx: 528, cy: 272, rx: 32, ry: 15, kx: 1, ky: 2, px: 4.4, py: 2.6, size: 2 },
+  { cx: 522, cy: 258, rx: 14, ry: 9,  kx: 3, ky: 2, px: 0.9, py: 3.8, size: 2 },
+  { cx: 538, cy: 268, rx: 24, ry: 13, kx: 2, ky: 3, px: 5.1, py: 0.9, size: 2 }
+];
+
+function pulseWindow(u, center, halfWidth) {
+  const d = Math.abs(u - center);
+  if (d >= halfWidth) return 0;
+  return Math.pow(Math.cos((d / halfWidth) * (Math.PI / 2)), 2);
+}
+
+function drawWestLineAmbient() {
+  const u = ((elapsed % WEST_LINE_LOOP_SEC) + WEST_LINE_LOOP_SEC) % WEST_LINE_LOOP_SEC / WEST_LINE_LOOP_SEC;
+  const tau = u * Math.PI * 2;
+
+  ctx.save();
+
+  // 1. Subtle golden sunset breathing behind the roof (1 cycle / 10s)
+  const sunBreath = 0.5 + 0.5 * Math.sin(tau);
+  const sunGrad = ctx.createRadialGradient(484, 108, 12, 484, 108, 175);
+  sunGrad.addColorStop(0, `rgba(255, 224, 148, ${0.14 + 0.08 * sunBreath})`);
+  sunGrad.addColorStop(0.5, `rgba(255, 172, 92, ${0.06 + 0.04 * sunBreath})`);
+  sunGrad.addColorStop(1, "rgba(255, 150, 80, 0)");
+  ctx.fillStyle = sunGrad;
+  ctx.fillRect(290, 0, 390, 290);
+
+  // 2. Warm interior glow breathing softly inside the manual entrance doors
+  const doorBreath = 0.5 + 0.5 * Math.sin(tau + 1.3);
+  const doorGrad = ctx.createRadialGradient(212, 405, 8, 212, 405, 68);
+  doorGrad.addColorStop(0, `rgba(255, 212, 132, ${0.16 + 0.08 * doorBreath})`);
+  doorGrad.addColorStop(1, "rgba(255, 180, 96, 0)");
+  ctx.fillStyle = doorGrad;
+  ctx.fillRect(140, 335, 145, 135);
+
+  // 3. Broken "Р" in "СУПЕРМАРКЕТ" -> mostly dark ("СУПЕРМАКЕТ"), flickers briefly twice per 10s loop
+  const flicker =
+    0.85 * pulseWindow(u, 0.31, 0.018) +
+    0.55 * pulseWindow(u, 0.345, 0.012) +
+    0.92 * pulseWindow(u, 0.74, 0.015) +
+    0.45 * pulseWindow(u, 0.77, 0.010);
+  const rLit = Math.min(1, flicker);
+
+  // Dim the "Р" letter (x: 862..871, y: 155..179, slightly slanted along the sign perspective)
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(861, 154);
+  ctx.lineTo(872, 158);
+  ctx.lineTo(872, 181);
+  ctx.lineTo(861, 177);
+  ctx.closePath();
+  ctx.fillStyle = `rgba(28, 46, 78, ${0.82 * (1 - rLit)})`;
+  ctx.fill();
+  ctx.restore();
+
+  // Soft evening glow on the flickering "Р" when it sparks on
+  if (rLit > 0.05) {
+    const rGrad = ctx.createRadialGradient(866, 167, 2, 866, 167, 22);
+    rGrad.addColorStop(0, `rgba(220, 238, 255, ${0.42 * rLit})`);
+    rGrad.addColorStop(1, "rgba(180, 215, 255, 0)");
+    ctx.fillStyle = rGrad;
+    ctx.fillRect(844, 145, 45, 45);
+  }
+
+  // 4. Three streetlamp globes warm breathing halos (periodic 1 & 2 cycles / 10s)
+  const globes = [
+    { x: 528, y: 263, r: 46, phase: 0.0 },
+    { x: 510, y: 278, r: 34, phase: 1.2 },
+    { x: 546, y: 277, r: 34, phase: 2.4 }
+  ];
+  ctx.globalCompositeOperation = "lighter";
+  globes.forEach((g) => {
+    const glow = 0.5 + 0.5 * Math.sin(tau * 2 + g.phase);
+    const rad = g.r * (0.94 + 0.1 * glow);
+    const grad = ctx.createRadialGradient(g.x, g.y, 2, g.x, g.y, rad);
+    grad.addColorStop(0, `rgba(255, 238, 178, ${0.26 + 0.1 * glow})`);
+    grad.addColorStop(0.45, `rgba(255, 192, 108, ${0.12 + 0.05 * glow})`);
+    grad.addColorStop(1, "rgba(255, 160, 70, 0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(g.x - rad, g.y - rad, rad * 2, rad * 2);
+  });
+
+  // 5. Crisp pixel-art evening motes orbiting the streetlamp in closed 10-second loops
+  lampMotes.forEach((m, idx) => {
+    const x = Math.round(m.cx + Math.cos(m.kx * tau + m.px) * m.rx);
+    const y = Math.round(m.cy + Math.sin(m.ky * tau + m.py) * m.ry);
+    const a = 0.35 + 0.55 * (0.5 + 0.5 * Math.sin(2 * tau + idx * 1.1));
+    ctx.fillStyle = `rgba(255, 240, 186, ${a})`;
+    ctx.fillRect(x, y, m.size, m.size);
+  });
+
+  // 6. Subtle apartment window twilight shimmer in upper-left building (1 cycle / 10s)
+  const winGlow1 = 0.5 + 0.5 * Math.sin(tau + 0.5);
+  const winGlow2 = 0.5 + 0.5 * Math.sin(tau + 3.6);
+  ctx.fillStyle = `rgba(255, 206, 118, ${0.14 * winGlow1})`;
+  ctx.fillRect(156, 98, 12, 16);
+  ctx.fillStyle = `rgba(255, 198, 104, ${0.14 * winGlow2})`;
+  ctx.fillRect(240, 62, 11, 15);
+
+  ctx.restore();
+}
+
 // --- Pixel-Art Character Sprites (Lena & Andrey on the Embankment) ---
 function drawPixelRect(x, y, w, h, color) {
   ctx.fillStyle = color;
@@ -664,7 +771,9 @@ function render() {
     const sc = scenes[currentSceneId];
     drawCoverImage(sc.bg());
 
-    if (currentSceneId === "embankment") {
+    if (currentSceneId === "west_line") {
+      drawWestLineAmbient();
+    } else if (currentSceneId === "embankment") {
       drawEmbankmentCharacters();
     }
 
