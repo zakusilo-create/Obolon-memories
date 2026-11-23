@@ -79,9 +79,6 @@ const music = {
   }
 };
 music.init();
-// Try playing immediately on splash screen load; if browser blocks autoplay,
-// any pointer/key interaction on the splash screen unlocks it immediately.
-music.start();
 
 // --- Kathy Rain-Style Dialog Data ---
 const speakers = {
@@ -374,16 +371,6 @@ function getWestLineTransform(img) {
   };
 }
 
-// Subtle pixel-art idle bob for a person slice from the background image
-function drawAnimatedSlice(img, tf, ix, iy, iw, ih, dx, dy) {
-  if (dx === 0 && dy === 0) return;
-  const cx = tf.x(ix);
-  const cy = tf.y(iy);
-  const cw = tf.w(iw);
-  const ch = tf.h(ih);
-  ctx.drawImage(img, ix, iy, iw, ih, Math.round(cx + dx), Math.round(cy + dy), Math.ceil(cw), Math.ceil(ch));
-}
-
 function drawWestLineAmbient() {
   const img = images.west_line;
   if (!img.complete || img.naturalWidth === 0) return;
@@ -443,7 +430,7 @@ function drawWestLineAmbient() {
 
   const rx1 = tf.x(863.8), rx2 = tf.x(871.3);
   const ryTopL = tf.y(155.5), ryTopR = tf.y(158.0);
-  const ryBotL = tf.y(176.2), ryBotR = tf.y(178.5);
+  const ryBotL = tf.y(176.2);
   const stemR = tf.x(866.8);
   const loopBot = tf.y(169.2);
 
@@ -469,50 +456,7 @@ function drawWestLineAmbient() {
   }
   ctx.restore();
 
-  // 5. Subtle idle animations on the people around West Line (all integer cycles / 10s)
-  // Guy sitting & raising his bottle/hand (x: 372..397, y: 374..416)
-  const toastBob = Math.round(Math.sin(tau * 2) * 1.3);
-  drawAnimatedSlice(img, tf, 374, 374, 23, 38, 0, toastBob);
-
-  // Friend sitting beside him in green (x: 400..421, y: 388..422)
-  const nodBob = Math.round(Math.sin(tau * 2 + 2.1) * 1.1);
-  drawAnimatedSlice(img, tf, 401, 388, 19, 28, 0, nodBob);
-
-  // Guy leaning on the wall holding a drink (x: 455..479, y: 368..410)
-  const leanSway = Math.round(Math.sin(tau + 0.8) * 1.2);
-  drawAnimatedSlice(img, tf, 456, 369, 22, 36, 0, leanSway);
-
-  // Person chatting by the West Line entrance (x: 224..242, y: 366..406)
-  const entranceBob = Math.round(Math.sin(tau + 2.5) * 1.1);
-  drawAnimatedSlice(img, tf, 225, 367, 16, 36, 0, entranceBob);
-
-  // Pedestrian walking past the streetlamp (x: 545..567, y: 386..440)
-  const walkBob = Math.round(Math.sin(tau * 3) * 1.2);
-  drawAnimatedSlice(img, tf, 546, 387, 20, 46, 0, walkBob);
-
-  // 6. Parked silver Mercedes double alarm/lock turn-signal blink (once per 10s loop at u = 0.52 & 0.56)
-  const carBlink =
-    pulseWindow(u, 0.52, 0.015) +
-    pulseWindow(u, 0.56, 0.015);
-  if (carBlink > 0.05) {
-    ctx.save();
-    ctx.globalCompositeOperation = "lighter";
-    [
-      { ix: 256, iy: 440 },
-      { ix: 349, iy: 441 }
-    ].forEach((pt) => {
-      const lx = tf.x(pt.ix), ly = tf.y(pt.iy);
-      const grad = ctx.createRadialGradient(lx, ly, 1, lx, ly, 16);
-      grad.addColorStop(0, `rgba(255, 190, 70, ${0.85 * carBlink})`);
-      grad.addColorStop(0.5, `rgba(255, 130, 30, ${0.35 * carBlink})`);
-      grad.addColorStop(1, "rgba(255, 110, 20, 0)");
-      ctx.fillStyle = grad;
-      ctx.fillRect(lx - 16, ly - 16, 32, 32);
-    });
-    ctx.restore();
-  }
-
-  // 7. Three streetlamp globes warm breathing halos (periodic 2 cycles / 10s)
+  // 5. Three streetlamp globes warm breathing halos (periodic 2 cycles / 10s)
   const globes = [
     { ix: 528, iy: 263, r: 46, phase: 0.0 },
     { ix: 510, iy: 278, r: 34, phase: 1.2 },
@@ -531,7 +475,7 @@ function drawWestLineAmbient() {
     ctx.fillRect(gx - rad, gy - rad, rad * 2, rad * 2);
   });
 
-  // 8. Crisp pixel-art evening motes orbiting the streetlamp in closed 10-second loops
+  // 6. Crisp pixel-art evening motes orbiting the streetlamp in closed 10-second loops
   lampMotes.forEach((m, idx) => {
     const x = Math.round(tf.x(m.cx) + Math.cos(m.kx * tau + m.px) * m.rx);
     const y = Math.round(tf.y(m.cy) + Math.sin(m.ky * tau + m.py) * m.ry);
@@ -540,7 +484,7 @@ function drawWestLineAmbient() {
     ctx.fillRect(x, y, m.size, m.size);
   });
 
-  // 9. Subtle apartment window twilight shimmer in upper-left building (1 cycle / 10s)
+  // 7. Subtle apartment window twilight shimmer in upper-left building (1 cycle / 10s)
   const winGlow1 = 0.5 + 0.5 * Math.sin(tau + 0.5);
   const winGlow2 = 0.5 + 0.5 * Math.sin(tau + 3.6);
   ctx.fillStyle = `rgba(255, 206, 118, ${0.16 * winGlow1})`;
@@ -709,22 +653,6 @@ function drawTitleControls() {
     4
   );
   ctx.restore();
-
-  if (!music.started) {
-    const pulse = 0.55 + 0.45 * Math.sin(elapsed * 3.0);
-    ctx.save();
-    ctx.globalAlpha = pulse;
-    drawOutlinedText(
-      "♪ Нажмите в любом месте, чтобы включить музыку",
-      WIDTH / 2,
-      HEIGHT - 16,
-      "14px monospace",
-      "#ffe9be",
-      "#140c1e",
-      4
-    );
-    ctx.restore();
-  }
 }
 
 function drawKathyRainDialog() {
@@ -926,8 +854,8 @@ function render() {
     }
   }
 
-  // Music toggle pill (top-right)
-  if (fadeAlpha < 0.9) {
+  // Music toggle pill (top-right, shown from West Line onward)
+  if (currentSceneId !== "title" && fadeAlpha < 0.9) {
     const label = !music.started ? "♪ Звук" : music.muted ? "♪ Выкл" : "♪ Вкл";
     ctx.fillStyle = "rgba(13, 10, 23, 0.65)";
     ctx.fillRect(muteBtn.x, muteBtn.y, muteBtn.w, muteBtn.h);
@@ -965,12 +893,12 @@ function getCanvasCoords(e) {
 
 canvas.addEventListener("mousemove", (e) => {
   mouse = getCanvasCoords(e);
-  if (isInRect(mouse, muteBtn)) {
+  if (currentSceneId !== "title" && isInRect(mouse, muteBtn)) {
     canvas.style.cursor = "pointer";
     return;
   }
   if (currentSceneId === "title") {
-    canvas.style.cursor = isInRect(mouse, startBtn) || !music.started ? "pointer" : "default";
+    canvas.style.cursor = isInRect(mouse, startBtn) ? "pointer" : "default";
     return;
   }
   if (mode === "scene") {
@@ -988,20 +916,19 @@ canvas.addEventListener("mousemove", (e) => {
 
 canvas.addEventListener("click", (e) => {
   const pos = getCanvasCoords(e);
-  if (isInRect(pos, muteBtn)) {
+  if (currentSceneId !== "title" && isInRect(pos, muteBtn)) {
     music.toggleMute();
     return;
   }
 
   if (currentSceneId === "title") {
-    music.start();
     if (mode === "title_ready" && isInRect(pos, startBtn)) {
+      music.start();
       transitionToScene("west_line");
     }
     return;
   }
 
-  music.start();
   if (mode === "scene") {
     if (dialog.active) {
       advanceDialog();
@@ -1023,13 +950,13 @@ canvas.addEventListener("click", (e) => {
 });
 
 window.addEventListener("keydown", (e) => {
-  if (e.key.toLowerCase() === "m") {
+  if (currentSceneId !== "title" && e.key.toLowerCase() === "m") {
     music.toggleMute();
     return;
   }
-  music.start();
   if (mode === "title_ready" && (e.key === "Enter" || e.key === " ")) {
     e.preventDefault();
+    music.start();
     transitionToScene("west_line");
   } else if (mode === "scene" && dialog.active && (e.key === " " || e.key === "Enter")) {
     e.preventDefault();
