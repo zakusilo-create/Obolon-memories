@@ -23,6 +23,7 @@ const music = {
   audio: new Audio("assets/audio/Kyiv%20Summer.mp3"),
   started: false,
   muted: false,
+  autoplayBlocked: false,
   targetVolume: 0.65,
   fadeTimer: null,
 
@@ -42,9 +43,11 @@ const music = {
     this.started = true;
     this.audio.volume = 0;
     this.audio.play().then(() => {
+      this.autoplayBlocked = false;
       this.fadeTo(this.muted ? 0 : this.targetVolume, 1500);
     }).catch(() => {
       this.started = false;
+      this.autoplayBlocked = true;
     });
   },
 
@@ -76,10 +79,9 @@ const music = {
   }
 };
 music.init();
-// Attempt autoplay immediately on the splash/title screen; if blocked by browser policy,
-// start on the very first pointer or key interaction.
+// Try playing immediately on splash screen load; if browser blocks autoplay,
+// any pointer/key interaction on the splash screen unlocks it immediately.
 music.start();
-window.addEventListener("pointerdown", () => music.start(), { once: true });
 
 // --- Kathy Rain-Style Dialog Data ---
 const speakers = {
@@ -138,7 +140,7 @@ const scenes = {
         y: 255,
         w: 165,
         h: 175,
-        text: "Автоматические двери тихо гудят. Тёплый воздух пахнет свежим хлебом и летней пылью."
+        text: "Тяжёлые стеклянные двери открываются вручную со знакомым скрипом. Внутри пахнет свежим хлебом и летней пылью."
       },
       {
         name: "Фонарь",
@@ -155,6 +157,14 @@ const scenes = {
         w: 165,
         h: 160,
         text: "WEST LINE. Здесь хоть раз встречался каждый на районе."
+      },
+      {
+        name: "Вывеска «Супермакет»",
+        x: 775,
+        y: 112,
+        w: 122,
+        h: 92,
+        text: "Буква «Р» в слове «Супермаркет» вечно не загоралась, и по вечерам над Оболонью гордо светилось «Супермакет»."
       },
       {
         name: "К набережной →",
@@ -209,11 +219,12 @@ const scenes = {
 };
 
 // --- Game State ---
-let mode = "title_fade_in"; // title_fade_in | title_ready | scene | transition
-let currentSceneId = "west_line";
+// currentSceneId is "title", "west_line", or "embankment"
+let currentSceneId = "title";
 let pendingSceneId = null;
+let mode = "title_fade_in"; // title_fade_in | title_ready | scene | transition
 let fadeAlpha = 1.0;
-let fadeDir = 0; // -1 fading in, +1 fading out
+let fadeDir = 0; // +1 fading to black, -1 fading in from black
 let titleAlpha = 0.0;
 let elapsed = 0;
 let lastTime = performance.now();
@@ -232,7 +243,9 @@ let dialog = {
 
 let mouse = { x: -1, y: -1 };
 let hoveredHotspot = null;
-const muteBtn = { x: WIDTH - 94, y: 14, w: 80, h: 28 };
+
+const muteBtn = { x: WIDTH - 102, y: 14, w: 88, h: 28 };
+const startBtn = { x: WIDTH / 2 - 95, y: HEIGHT - 76, w: 190, h: 42 };
 
 function isInRect(pos, r) {
   return pos.x >= r.x && pos.x <= r.x + r.w && pos.y >= r.y && pos.y <= r.y + r.h;
@@ -331,67 +344,51 @@ function drawEmbankmentCharacters() {
   const bobL = Math.round(Math.sin(elapsed * 2.2) * 1.5);
   const bobA = Math.round(Math.sin(elapsed * 2.2 + 1.1) * 1.5);
 
-  // Ground shadows
   ctx.fillStyle = "rgba(12, 8, 22, 0.45)";
   ctx.beginPath();
   ctx.ellipse(446, 452, 22, 7, 0, 0, Math.PI * 2);
   ctx.ellipse(512, 452, 24, 7, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // --- LENA (left, pale blue top, dark jeans, chestnut hair) ---
+  // --- LENA ---
   const lx = 432;
   const ly = 342 + bobL;
-  // Hair back
   drawPixelRect(lx + 4, ly + 4, 24, 28, "#3e2723");
-  // Face
   drawPixelRect(lx + 9, ly + 8, 14, 15, "#f0c8b4");
-  // Bangs & hair sides
   drawPixelRect(lx + 6, ly + 4, 20, 7, "#4e342e");
   drawPixelRect(lx + 5, ly + 10, 5, 19, "#4e342e");
   drawPixelRect(lx + 22, ly + 10, 5, 19, "#3e2723");
-  // Eyes (blue-green)
   drawPixelRect(lx + 11, ly + 13, 3, 2, "#4f9aa8");
   drawPixelRect(lx + 18, ly + 13, 3, 2, "#4f9aa8");
-  // Pale blue sleeveless top
   drawPixelRect(lx + 8, ly + 25, 16, 30, "#a9cbe0");
   drawPixelRect(lx + 8, ly + 25, 16, 4, "#8fb6cf");
-  // Arms
   drawPixelRect(lx + 4, ly + 27, 4, 25, "#e6baa4");
   drawPixelRect(lx + 24, ly + 27, 4, 25, "#dca992");
-  // Jeans
   drawPixelRect(lx + 8, ly + 55, 7, 44, "#2c3e5e");
   drawPixelRect(lx + 17, ly + 55, 7, 44, "#24334f");
-  // Sneakers
   drawPixelRect(lx + 6, ly + 99, 9, 6, "#e8e2d8");
   drawPixelRect(lx + 17, ly + 99, 9, 6, "#d4cec4");
 
-  // --- ANDREY (right, orange t-shirt, glasses, dark jeans) ---
+  // --- ANDREY ---
   const ax = 496;
   const ay = 330 + bobA;
-  // Hair
   drawPixelRect(ax + 7, ay + 2, 20, 10, "#2f241f");
   drawPixelRect(ax + 6, ay + 6, 4, 8, "#2f241f");
   drawPixelRect(ax + 24, ay + 6, 4, 8, "#2f241f");
-  // Face
   drawPixelRect(ax + 9, ay + 9, 16, 17, "#eab89a");
-  // Glasses
   drawPixelRect(ax + 10, ay + 14, 6, 4, "#3b2320");
   drawPixelRect(ax + 18, ay + 14, 6, 4, "#3b2320");
   drawPixelRect(ax + 11, ay + 15, 4, 2, "#c8e0ea");
   drawPixelRect(ax + 19, ay + 15, 4, 2, "#c8e0ea");
   drawPixelRect(ax + 16, ay + 15, 2, 1, "#3b2320");
-  // Orange t-shirt
   drawPixelRect(ax + 5, ay + 28, 24, 36, "#e86a24");
   drawPixelRect(ax + 5, ay + 28, 24, 5, "#f4823c");
-  // Sleeves & arms
   drawPixelRect(ax + 1, ay + 30, 5, 14, "#d45a1a");
   drawPixelRect(ax + 28, ay + 30, 5, 14, "#c45016");
   drawPixelRect(ax + 2, ay + 44, 4, 18, "#dfa98b");
   drawPixelRect(ax + 28, ay + 44, 4, 18, "#d49c7e");
-  // Jeans
   drawPixelRect(ax + 7, ay + 64, 9, 50, "#273754");
   drawPixelRect(ax + 18, ay + 64, 9, 50, "#1f2c45");
-  // Shoes
   drawPixelRect(ax + 6, ay + 114, 10, 6, "#2c2426");
   drawPixelRect(ax + 18, ay + 114, 10, 6, "#241d1f");
 }
@@ -476,6 +473,43 @@ function drawTitleLockup(alpha) {
   ctx.restore();
 }
 
+function drawTitleControls() {
+  const hovered = isInRect(mouse, startBtn);
+  ctx.save();
+  ctx.fillStyle = hovered ? "rgba(42, 26, 62, 0.92)" : "rgba(16, 11, 28, 0.78)";
+  ctx.fillRect(startBtn.x, startBtn.y, startBtn.w, startBtn.h);
+  ctx.strokeStyle = hovered ? "#ffe9be" : "rgba(255, 218, 148, 0.75)";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(startBtn.x + 1, startBtn.y + 1, startBtn.w - 2, startBtn.h - 2);
+
+  drawOutlinedText(
+    "НАЧАТЬ",
+    startBtn.x + startBtn.w / 2,
+    startBtn.y + startBtn.h / 2 + 1,
+    "bold 18px monospace",
+    hovered ? "#fff8e0" : "#ffe5a3",
+    "#140c1e",
+    4
+  );
+  ctx.restore();
+
+  if (!music.started) {
+    const pulse = 0.55 + 0.45 * Math.sin(elapsed * 3.0);
+    ctx.save();
+    ctx.globalAlpha = pulse;
+    drawOutlinedText(
+      "♪ Нажмите в любом месте, чтобы включить музыку",
+      WIDTH / 2,
+      HEIGHT - 16,
+      "14px monospace",
+      "#ffe9be",
+      "#140c1e",
+      4
+    );
+    ctx.restore();
+  }
+}
+
 function drawKathyRainDialog() {
   const line = dialog.lines[dialog.index];
   if (!line) return;
@@ -483,7 +517,7 @@ function drawKathyRainDialog() {
   const portrait = speaker.portrait();
 
   const boxX = 28;
-  const boxH = 138;
+  const boxH = 132;
   const boxY = HEIGHT - boxH - 16;
   const boxW = WIDTH - 56;
 
@@ -499,32 +533,27 @@ function drawKathyRainDialog() {
   ctx.lineWidth = 1;
   ctx.strokeRect(boxX + 5, boxY + 5, boxW - 10, boxH - 10);
 
-  // Portrait frame (left)
-  const pSize = 112;
+  // Kathy Rain-style oval portrait popping slightly above the dialog bar
+  const pW = 114;
+  const pH = 152;
   const px = boxX + 14;
-  const py = boxY + 13;
-  ctx.fillStyle = "#09060f";
-  ctx.fillRect(px, py, pSize, pSize);
+  const py = boxY + boxH - pH - 8;
 
   if (portrait && portrait.complete && portrait.naturalWidth > 0) {
     ctx.save();
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(portrait, px, py, pSize, pSize);
+    ctx.drawImage(portrait, px, py, pW, pH);
     ctx.restore();
   }
 
-  ctx.strokeStyle = speaker.color;
-  ctx.lineWidth = 2;
-  ctx.strokeRect(px, py, pSize, pSize);
-
   // Speaker name
-  const textX = px + pSize + 20;
+  const textX = px + pW + 20;
   const textMaxW = boxX + boxW - textX - 24;
   ctx.font = "bold 18px monospace";
   ctx.textAlign = "left";
   ctx.textBaseline = "top";
   ctx.fillStyle = speaker.color;
-  ctx.fillText(speaker.name, textX, py + 2);
+  ctx.fillText(speaker.name, textX, boxY + 16);
 
   // Typewriter text
   const visibleText = line.text.slice(0, Math.floor(dialog.charCount));
@@ -533,7 +562,7 @@ function drawKathyRainDialog() {
   ctx.font = font;
   ctx.fillStyle = "#f7efe0";
   wrapped.forEach((l, i) => {
-    ctx.fillText(l, textX, py + 30 + i * 28);
+    ctx.fillText(l, textX, boxY + 46 + i * 28);
   });
 
   // Advance indicator
@@ -542,7 +571,7 @@ function drawKathyRainDialog() {
     ctx.font = "bold 14px monospace";
     ctx.textAlign = "right";
     ctx.fillStyle = "#ffe5a3";
-    ctx.fillText("▼", boxX + boxW - 18, boxY + boxH - 24 + bob);
+    ctx.fillText("▼", boxX + boxW - 18, boxY + boxH - 22 + bob);
   }
 }
 
@@ -591,7 +620,7 @@ function update(dt) {
         pendingSceneId = null;
         fadeDir = -1;
         const sc = scenes[currentSceneId];
-        if (sc.enterMessage) {
+        if (sc && sc.enterMessage) {
           messageText = sc.enterMessage;
           messageTimer = 4.0;
         } else {
@@ -627,26 +656,10 @@ function render() {
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-  const isTitle = mode === "title_fade_in" || mode === "title_ready" || (mode === "transition" && fadeDir > 0 && pendingSceneId === "west_line" && titleAlpha > 0 && currentSceneId === "west_line" && !embankmentVisited && messageTimer === 0);
-
-  if (mode === "title_fade_in" || mode === "title_ready") {
+  if (currentSceneId === "title") {
     drawCoverImage(images.title);
     if (titleAlpha > 0) drawTitleLockup(titleAlpha);
-    if (mode === "title_ready") {
-      const pulse = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(elapsed * 3.2));
-      ctx.save();
-      ctx.globalAlpha = pulse;
-      drawOutlinedText(
-        "Нажмите, чтобы продолжить",
-        WIDTH / 2,
-        HEIGHT - 34,
-        "bold 20px monospace",
-        "#fff0d2",
-        "#140c1e",
-        5
-      );
-      ctx.restore();
-    }
+    if (mode === "title_ready") drawTitleControls();
   } else {
     const sc = scenes[currentSceneId];
     drawCoverImage(sc.bg());
@@ -694,7 +707,7 @@ function render() {
     }
   }
 
-  // Subtle music toggle pill (top-right)
+  // Music toggle pill (top-right)
   if (fadeAlpha < 0.9) {
     const label = !music.started ? "♪ Звук" : music.muted ? "♪ Выкл" : "♪ Вкл";
     ctx.fillStyle = "rgba(13, 10, 23, 0.65)";
@@ -737,6 +750,10 @@ canvas.addEventListener("mousemove", (e) => {
     canvas.style.cursor = "pointer";
     return;
   }
+  if (currentSceneId === "title") {
+    canvas.style.cursor = isInRect(mouse, startBtn) || !music.started ? "pointer" : "default";
+    return;
+  }
   if (mode === "scene") {
     if (dialog.active) {
       canvas.style.cursor = "pointer";
@@ -746,7 +763,7 @@ canvas.addEventListener("mousemove", (e) => {
     hoveredHotspot = sc.hotspots.find((h) => isInRect(mouse, h)) || null;
     canvas.style.cursor = hoveredHotspot ? "pointer" : "default";
   } else {
-    canvas.style.cursor = "pointer";
+    canvas.style.cursor = "default";
   }
 });
 
@@ -756,12 +773,16 @@ canvas.addEventListener("click", (e) => {
     music.toggleMute();
     return;
   }
-  music.start();
 
-  if (mode === "title_ready") {
-    transitionToScene("west_line");
+  if (currentSceneId === "title") {
+    music.start();
+    if (mode === "title_ready" && isInRect(pos, startBtn)) {
+      transitionToScene("west_line");
+    }
     return;
   }
+
+  music.start();
   if (mode === "scene") {
     if (dialog.active) {
       advanceDialog();
@@ -776,7 +797,7 @@ canvas.addEventListener("click", (e) => {
         hit.onClick();
       } else if (hit.text) {
         messageText = hit.text;
-        messageTimer = 4.5;
+        messageTimer = 5.0;
       }
     }
   }
@@ -788,7 +809,8 @@ window.addEventListener("keydown", (e) => {
     return;
   }
   music.start();
-  if (mode === "title_ready") {
+  if (mode === "title_ready" && (e.key === "Enter" || e.key === " ")) {
+    e.preventDefault();
     transitionToScene("west_line");
   } else if (mode === "scene" && dialog.active && (e.key === " " || e.key === "Enter")) {
     e.preventDefault();
