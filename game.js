@@ -351,92 +351,202 @@ function pulseWindow(u, center, halfWidth) {
   return Math.pow(Math.cos((d / halfWidth) * (Math.PI / 2)), 2);
 }
 
+// Maps source pixel coords (1024x571) of splash_screen.jpeg to canvas coords (1024x576)
+function getWestLineTransform(img) {
+  const imgRatio = img.naturalWidth / img.naturalHeight;
+  const canvasRatio = WIDTH / HEIGHT;
+  let sx = 0, sy = 0, sw = img.naturalWidth, sh = img.naturalHeight;
+  if (imgRatio > canvasRatio) {
+    sw = img.naturalHeight * canvasRatio;
+    sx = (img.naturalWidth - sw) / 2;
+  } else {
+    sh = img.naturalWidth / canvasRatio;
+    sy = (img.naturalHeight - sh) / 2;
+  }
+  const scaleX = WIDTH / sw;
+  const scaleY = HEIGHT / sh;
+  return {
+    sx, sy, scaleX, scaleY,
+    x: (ix) => (ix - sx) * scaleX,
+    y: (iy) => (iy - sy) * scaleY,
+    w: (iw) => iw * scaleX,
+    h: (ih) => ih * scaleY
+  };
+}
+
+// Subtle pixel-art idle bob for a person slice from the background image
+function drawAnimatedSlice(img, tf, ix, iy, iw, ih, dx, dy) {
+  if (dx === 0 && dy === 0) return;
+  const cx = tf.x(ix);
+  const cy = tf.y(iy);
+  const cw = tf.w(iw);
+  const ch = tf.h(ih);
+  ctx.drawImage(img, ix, iy, iw, ih, Math.round(cx + dx), Math.round(cy + dy), Math.ceil(cw), Math.ceil(ch));
+}
+
 function drawWestLineAmbient() {
-  const u = ((elapsed % WEST_LINE_LOOP_SEC) + WEST_LINE_LOOP_SEC) % WEST_LINE_LOOP_SEC / WEST_LINE_LOOP_SEC;
+  const img = images.west_line;
+  if (!img.complete || img.naturalWidth === 0) return;
+  const tf = getWestLineTransform(img);
+
+  const u = (((elapsed % WEST_LINE_LOOP_SEC) + WEST_LINE_LOOP_SEC) % WEST_LINE_LOOP_SEC) / WEST_LINE_LOOP_SEC;
   const tau = u * Math.PI * 2;
 
   ctx.save();
 
   // 1. Subtle golden sunset breathing behind the roof (1 cycle / 10s)
   const sunBreath = 0.5 + 0.5 * Math.sin(tau);
-  const sunGrad = ctx.createRadialGradient(484, 108, 12, 484, 108, 175);
+  const sunX = tf.x(484), sunY = tf.y(108);
+  const sunGrad = ctx.createRadialGradient(sunX, sunY, 12, sunX, sunY, 175);
   sunGrad.addColorStop(0, `rgba(255, 224, 148, ${0.14 + 0.08 * sunBreath})`);
   sunGrad.addColorStop(0.5, `rgba(255, 172, 92, ${0.06 + 0.04 * sunBreath})`);
   sunGrad.addColorStop(1, "rgba(255, 150, 80, 0)");
   ctx.fillStyle = sunGrad;
   ctx.fillRect(290, 0, 390, 290);
 
-  // 2. Warm interior glow breathing softly inside the manual entrance doors
+  // 2. Distant evening birds gliding across the upper-right sky (seamless 10s wrap)
+  const birds = [
+    { startU: 0.08, dur: 0.42, x0: 470, x1: 990, y0: 54, y1: 28, amp: 7, flapFreq: 22 },
+    { startU: 0.14, dur: 0.44, x0: 455, x1: 975, y0: 66, y1: 38, amp: 6, flapFreq: 20 }
+  ];
+  birds.forEach((b) => {
+    const localU = (u - b.startU) / b.dur;
+    if (localU > 0 && localU < 1) {
+      const fade = Math.sin(localU * Math.PI);
+      const bx = Math.round(b.x0 + (b.x1 - b.x0) * localU);
+      const by = Math.round(b.y0 + (b.y1 - b.y0) * localU + Math.sin(localU * Math.PI * 2) * b.amp);
+      const wing = Math.sin(tau * b.flapFreq) > 0 ? -2 : 1;
+      ctx.fillStyle = `rgba(54, 34, 64, ${0.75 * fade})`;
+      ctx.fillRect(bx, by, 2, 2);
+      ctx.fillRect(bx - 3, by + wing, 3, 1);
+      ctx.fillRect(bx + 2, by + wing, 3, 1);
+    }
+  });
+
+  // 3. Warm interior glow breathing softly inside the manual entrance doors
   const doorBreath = 0.5 + 0.5 * Math.sin(tau + 1.3);
-  const doorGrad = ctx.createRadialGradient(212, 405, 8, 212, 405, 68);
-  doorGrad.addColorStop(0, `rgba(255, 212, 132, ${0.16 + 0.08 * doorBreath})`);
+  const doorX = tf.x(212), doorY = tf.y(405);
+  const doorGrad = ctx.createRadialGradient(doorX, doorY, 8, doorX, doorY, 64);
+  doorGrad.addColorStop(0, `rgba(255, 212, 132, ${0.15 + 0.08 * doorBreath})`);
   doorGrad.addColorStop(1, "rgba(255, 180, 96, 0)");
   ctx.fillStyle = doorGrad;
   ctx.fillRect(140, 335, 145, 135);
 
-  // 3. Broken "Р" in "СУПЕРМАРКЕТ" -> mostly dark ("СУПЕРМАКЕТ"), flickers briefly twice per 10s loop
+  // 4. Pixel-exact broken "Р" in "СУПЕРМАРКЕТ" (strictly x: 864..871, y: 156..176 in image coords)
+  // Stays mostly dark ("СУПЕРМАКЕТ") and flickers briefly twice per 10s loop with zero bleed onto А or К
   const flicker =
-    0.85 * pulseWindow(u, 0.31, 0.018) +
-    0.55 * pulseWindow(u, 0.345, 0.012) +
-    0.92 * pulseWindow(u, 0.74, 0.015) +
-    0.45 * pulseWindow(u, 0.77, 0.010);
+    0.95 * pulseWindow(u, 0.30, 0.016) +
+    0.65 * pulseWindow(u, 0.335, 0.011) +
+    1.00 * pulseWindow(u, 0.73, 0.014) +
+    0.55 * pulseWindow(u, 0.76, 0.009);
   const rLit = Math.min(1, flicker);
 
-  // Dim the "Р" letter (x: 862..871, y: 155..179, slightly slanted along the sign perspective)
+  const rx1 = tf.x(863.8), rx2 = tf.x(871.3);
+  const ryTopL = tf.y(155.5), ryTopR = tf.y(158.0);
+  const ryBotL = tf.y(176.2), ryBotR = tf.y(178.5);
+  const stemR = tf.x(866.8);
+  const loopBot = tf.y(169.2);
+
+  // Clip strictly to the "Р" letter silhouette (vertical stem + upper loop)
   ctx.save();
   ctx.beginPath();
-  ctx.moveTo(861, 154);
-  ctx.lineTo(872, 158);
-  ctx.lineTo(872, 181);
-  ctx.lineTo(861, 177);
+  ctx.moveTo(rx1, ryTopL);
+  ctx.lineTo(rx2, ryTopR);
+  ctx.lineTo(rx2, loopBot);
+  ctx.lineTo(stemR, loopBot - 0.5);
+  ctx.lineTo(stemR, ryBotL + 1);
+  ctx.lineTo(rx1, ryBotL);
   ctx.closePath();
-  ctx.fillStyle = `rgba(28, 46, 78, ${0.82 * (1 - rLit)})`;
+
+  // Darken ONLY the "Р" to the navy sign backing when unlit
+  ctx.fillStyle = `rgba(30, 44, 72, ${0.88 * (1 - rLit)})`;
   ctx.fill();
+
+  // Crisp bright flash strictly inside the "Р" silhouette when it sparks on
+  if (rLit > 0.08) {
+    ctx.fillStyle = `rgba(235, 245, 255, ${0.55 * rLit})`;
+    ctx.fill();
+  }
   ctx.restore();
 
-  // Soft evening glow on the flickering "Р" when it sparks on
-  if (rLit > 0.05) {
-    const rGrad = ctx.createRadialGradient(866, 167, 2, 866, 167, 22);
-    rGrad.addColorStop(0, `rgba(220, 238, 255, ${0.42 * rLit})`);
-    rGrad.addColorStop(1, "rgba(180, 215, 255, 0)");
-    ctx.fillStyle = rGrad;
-    ctx.fillRect(844, 145, 45, 45);
+  // 5. Subtle idle animations on the people around West Line (all integer cycles / 10s)
+  // Guy sitting & raising his bottle/hand (x: 372..397, y: 374..416)
+  const toastBob = Math.round(Math.sin(tau * 2) * 1.3);
+  drawAnimatedSlice(img, tf, 374, 374, 23, 38, 0, toastBob);
+
+  // Friend sitting beside him in green (x: 400..421, y: 388..422)
+  const nodBob = Math.round(Math.sin(tau * 2 + 2.1) * 1.1);
+  drawAnimatedSlice(img, tf, 401, 388, 19, 28, 0, nodBob);
+
+  // Guy leaning on the wall holding a drink (x: 455..479, y: 368..410)
+  const leanSway = Math.round(Math.sin(tau + 0.8) * 1.2);
+  drawAnimatedSlice(img, tf, 456, 369, 22, 36, 0, leanSway);
+
+  // Person chatting by the West Line entrance (x: 224..242, y: 366..406)
+  const entranceBob = Math.round(Math.sin(tau + 2.5) * 1.1);
+  drawAnimatedSlice(img, tf, 225, 367, 16, 36, 0, entranceBob);
+
+  // Pedestrian walking past the streetlamp (x: 545..567, y: 386..440)
+  const walkBob = Math.round(Math.sin(tau * 3) * 1.2);
+  drawAnimatedSlice(img, tf, 546, 387, 20, 46, 0, walkBob);
+
+  // 6. Parked silver Mercedes double alarm/lock turn-signal blink (once per 10s loop at u = 0.52 & 0.56)
+  const carBlink =
+    pulseWindow(u, 0.52, 0.015) +
+    pulseWindow(u, 0.56, 0.015);
+  if (carBlink > 0.05) {
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    [
+      { ix: 256, iy: 440 },
+      { ix: 349, iy: 441 }
+    ].forEach((pt) => {
+      const lx = tf.x(pt.ix), ly = tf.y(pt.iy);
+      const grad = ctx.createRadialGradient(lx, ly, 1, lx, ly, 16);
+      grad.addColorStop(0, `rgba(255, 190, 70, ${0.85 * carBlink})`);
+      grad.addColorStop(0.5, `rgba(255, 130, 30, ${0.35 * carBlink})`);
+      grad.addColorStop(1, "rgba(255, 110, 20, 0)");
+      ctx.fillStyle = grad;
+      ctx.fillRect(lx - 16, ly - 16, 32, 32);
+    });
+    ctx.restore();
   }
 
-  // 4. Three streetlamp globes warm breathing halos (periodic 1 & 2 cycles / 10s)
+  // 7. Three streetlamp globes warm breathing halos (periodic 2 cycles / 10s)
   const globes = [
-    { x: 528, y: 263, r: 46, phase: 0.0 },
-    { x: 510, y: 278, r: 34, phase: 1.2 },
-    { x: 546, y: 277, r: 34, phase: 2.4 }
+    { ix: 528, iy: 263, r: 46, phase: 0.0 },
+    { ix: 510, iy: 278, r: 34, phase: 1.2 },
+    { ix: 546, iy: 277, r: 34, phase: 2.4 }
   ];
   ctx.globalCompositeOperation = "lighter";
   globes.forEach((g) => {
+    const gx = tf.x(g.ix), gy = tf.y(g.iy);
     const glow = 0.5 + 0.5 * Math.sin(tau * 2 + g.phase);
     const rad = g.r * (0.94 + 0.1 * glow);
-    const grad = ctx.createRadialGradient(g.x, g.y, 2, g.x, g.y, rad);
+    const grad = ctx.createRadialGradient(gx, gy, 2, gx, gy, rad);
     grad.addColorStop(0, `rgba(255, 238, 178, ${0.26 + 0.1 * glow})`);
     grad.addColorStop(0.45, `rgba(255, 192, 108, ${0.12 + 0.05 * glow})`);
     grad.addColorStop(1, "rgba(255, 160, 70, 0)");
     ctx.fillStyle = grad;
-    ctx.fillRect(g.x - rad, g.y - rad, rad * 2, rad * 2);
+    ctx.fillRect(gx - rad, gy - rad, rad * 2, rad * 2);
   });
 
-  // 5. Crisp pixel-art evening motes orbiting the streetlamp in closed 10-second loops
+  // 8. Crisp pixel-art evening motes orbiting the streetlamp in closed 10-second loops
   lampMotes.forEach((m, idx) => {
-    const x = Math.round(m.cx + Math.cos(m.kx * tau + m.px) * m.rx);
-    const y = Math.round(m.cy + Math.sin(m.ky * tau + m.py) * m.ry);
+    const x = Math.round(tf.x(m.cx) + Math.cos(m.kx * tau + m.px) * m.rx);
+    const y = Math.round(tf.y(m.cy) + Math.sin(m.ky * tau + m.py) * m.ry);
     const a = 0.35 + 0.55 * (0.5 + 0.5 * Math.sin(2 * tau + idx * 1.1));
     ctx.fillStyle = `rgba(255, 240, 186, ${a})`;
     ctx.fillRect(x, y, m.size, m.size);
   });
 
-  // 6. Subtle apartment window twilight shimmer in upper-left building (1 cycle / 10s)
+  // 9. Subtle apartment window twilight shimmer in upper-left building (1 cycle / 10s)
   const winGlow1 = 0.5 + 0.5 * Math.sin(tau + 0.5);
   const winGlow2 = 0.5 + 0.5 * Math.sin(tau + 3.6);
-  ctx.fillStyle = `rgba(255, 206, 118, ${0.14 * winGlow1})`;
-  ctx.fillRect(156, 98, 12, 16);
-  ctx.fillStyle = `rgba(255, 198, 104, ${0.14 * winGlow2})`;
-  ctx.fillRect(240, 62, 11, 15);
+  ctx.fillStyle = `rgba(255, 206, 118, ${0.16 * winGlow1})`;
+  ctx.fillRect(tf.x(156), tf.y(98), 12, 16);
+  ctx.fillStyle = `rgba(255, 198, 104, ${0.16 * winGlow2})`;
+  ctx.fillRect(tf.x(240), tf.y(62), 11, 15);
 
   ctx.restore();
 }
